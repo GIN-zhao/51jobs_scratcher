@@ -1,5 +1,6 @@
 *.txt
-*.xlsx
 *.exe
 /crawl_data
 /result
+*.html
+./*.xlsx

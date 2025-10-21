@@ -2,7 +2,7 @@ import pandas as pd
 from openai import OpenAI
 from tqdm import tqdm
 import random
-
+import time 
 # --- 大模型配置 ---
 client = OpenAI(
     api_key="no-need-for-api-key",
@@ -10,11 +10,39 @@ client = OpenAI(
 )
 
 # 定义学科列表
-disciplines = [
-    "生物学", "机械工程", "仪器科学与技术", "材料科学与工程", 
-    "电气工程", "电子科学与技术", "信息与通信工程", "控制科学与技术",
-    "计算机科学与技术", "生物医学工程", "生物工程", "基础医学", 
-    "临床医学", "药学"
+disciplines =[
+    "应用经济学",
+    "法学",
+    "外国语言文学",
+    "数学",
+    "物理学",
+    "化学",
+    "地理学",
+    "大气科学",
+    "力学",
+    "机械工程",
+    "光学工程",
+    "仪器科学与技术",
+    "材料科学与工程",
+    "动力工程及工程热物理",
+    "电气工程",
+    "电子科学与技术",
+    "信息与通信工程",
+    "控制科学与工程",
+    "计算机科学与技术",
+    "土木工程",
+    "测绘科学与技术",
+    "化学工程与技术",
+    "交通运输工程",
+    "航空宇航科学与技术",
+    "兵器科学与技术",
+    "环境科学与工程",
+    "软件工程",
+    "安全科学与工程",
+    "管理科学与工程",
+    "工商管理学",
+    "公共管理学",
+    "遥感科学与技术"
 ]
 
 def generate_response(prompt):
@@ -99,7 +127,7 @@ def process_excel_file_with_balancing(input_file, output_file):
         # 3. 更新计数器和结果列表
         discipline_counts[assigned_discipline] += 1
         results.append(assigned_discipline)
-
+        time.sleep(0.1)
     # 将分析结果更新回DataFrame
     df[third_col_name] = results
 
@@ -117,7 +145,7 @@ def process_excel_file_with_balancing(input_file, output_file):
 
 
 if __name__ == '__main__':
-    INPUT_EXCEL = 'merged_招聘分析结果.xlsx'
-    OUTPUT_EXCEL = 'final_analyzed_results_balanced.xlsx'
-    
+    INPUT_EXCEL = '3/merge.xlsx'
+    OUTPUT_EXCEL = '3/final_航空航天.xlsx'
+
     process_excel_file_with_balancing(INPUT_EXCEL, OUTPUT_EXCEL)

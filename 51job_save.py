@@ -176,12 +176,10 @@ def analyze_job_with_gemini(job_information, disciplines):
         请只返回最相关的一个学科名称，不要其他解释。
         """
         import os 
-        os.environ['https_proxy'] = 'http://127.0.0.1:7890'
-        os.environ['http_proxy'] = 'http://127.0.0.1:7890'
+  
         response = model.generate_content(prompt)
         result = response.text.strip()
-        os.environ['https_proxy'] = ''
-        os.environ['http_proxy'] = ''
+       
         print(result)
         # 确保返回的结果在学科列表中
         for discipline in disciplines:

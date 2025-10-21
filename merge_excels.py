@@ -46,6 +46,20 @@ def merge_excel_files(input_folder, output_filename):
     cleaned_df = cleaned_df.dropna(subset=[fourth_col_name_for_drop])
     print(f"去除第四列为空的行后行数: {len(cleaned_df)}")
 
+    # 新增：对第四列的文字进行截断
+    fourth_col_name_for_truncate = cleaned_df.columns[3]
+    print(f"将对第四列 '{fourth_col_name_for_truncate}' 的内容进行截断...")
+    def truncate_text(text):
+        if isinstance(text, str):
+            keyword = "关键字"
+            index = text.find(keyword)
+            if index != -1:
+                return text[:index]
+        return text
+    
+    cleaned_df[fourth_col_name_for_truncate] = cleaned_df[fourth_col_name_for_truncate].apply(truncate_text)
+    print("内容截断完成。")
+
     # 3. 去除第四列中包含'https://'的行
     fourth_col_name_for_filter = cleaned_df.columns[3] 
     print(f"将对第四列 '{fourth_col_name_for_filter}' 进行筛选...")
@@ -63,8 +77,8 @@ def merge_excel_files(input_folder, output_filename):
 
 if __name__ == '__main__':
     # 设置输入文件夹和输出文件名
-    INPUT_FOLDER = 'crawl_data'
-    OUTPUT_FILE = 'merged_招聘分析结果.xlsx'
+    INPUT_FOLDER = '3'
+    OUTPUT_FILE = '3/merge.xlsx'
     
     # 执行合并功能
     merge_excel_files(INPUT_FOLDER, OUTPUT_FILE)
