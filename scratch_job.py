@@ -32,7 +32,9 @@ el_dc = './descendant-or-self::SPAN[contains(@class,"dc text-cut")]'
 el_dc2 = './descendant-or-self::SPAN[contains(@class,"dc shrink-0")]'
 el_dc3 = './descendant-or-self::SPAN[contains(@class,"dc shrink-0")][2]'
 el_tips = './descendant-or-self::SPAN[contains(@class,"tip shrink-0")]'
-el_shrink0 = './descendant-or-self::DIV[@class="shrink-0"]'
+el_shrink0 = './descendant-or-self::DIV[contains(@class,"shrink-0")]'
+el_shrink3 = './descendant-or-self::DIV[@class="shrink-0"]'
+el_dc1 = './descendant-or-self::SPAN[contains(@class,"dc shrink-0")][2]'
 def handle_slider_verification(driver):
     """处理可能出现的滑块验证。"""
     try:
@@ -61,7 +63,7 @@ def handle_slider_verification(driver):
         print(f"  - 处理滑块验证时出错: {e}")
         return False
 
-def scrape_all_jobs(level,xpath):
+def scrape_all_jobs(level,xpath,cy):
     """根据关键词字典爬取51job的职位详情，并保存为指定格式的Excel。"""
     print("正在初始化浏览器...")
     chrome_driver_path = './chromedriver.exe'
@@ -115,14 +117,18 @@ def scrape_all_jobs(level,xpath):
                     for i in range(len(job_items)):
                         current_job_item = web.find_elements(By.XPATH, '//div[contains(@class, "joblist-item-job-wrapper")]')[i]
                         result = {
+                            "标题":current_job_item.find_element(By.XPATH, el_jname).text if current_job_item.find_elements(By.XPATH, el_jname) else "",
                             "图片":current_job_item.find_element(By.XPATH, el_img_url).get_attribute('src') if current_job_item.find_elements(By.XPATH, el_img_url) else "",
-                            "职位名称":current_job_item.find_element(By.XPATH, el_jname).text if current_job_item.find_elements(By.XPATH, el_jname) else "",
-                            "公司名称":current_job_item.find_element(By.XPATH, el_cname).text if current_job_item.find_elements(By.XPATH, el_cname) else "",    
-                            "公司链接":current_job_item.find_element(By.XPATH, el_cname_link).get_attribute('href') if current_job_item.find_elements(By.XPATH, el_cname_link) else "",
-                            "薪资":current_job_item.find_element(By.XPATH, el_sal).text if current_job_item.find_elements(By.XPATH, el_sal) else "",
-                            "dc":current_job_item.find_element(By.XPATH, el_dc).text if current_job_item.find_elements(By.XPATH, el_dc) else "",
-                            "tips":current_job_item.find_element(By.XPATH, el_tips).text if current_job_item.find_elements(By.XPATH, el_tips) else "",
+                            "sal":current_job_item.find_element(By.XPATH, el_sal).text if current_job_item.find_elements(By.XPATH, el_sal) else "",
                             "关键词":current_job_item.find_element(By.XPATH, el_tags).text if current_job_item.find_elements(By.XPATH, el_tags) else "",
+                            "名称_链接":current_job_item.find_element(By.XPATH, el_cname_link).get_attribute('href') if current_job_item.find_elements(By.XPATH, el_cname_link) else "",
+                            "名称":current_job_item.find_element(By.XPATH, el_cname).text if current_job_item.find_elements(By.XPATH, el_cname) else "",    
+                            "dc":current_job_item.find_element(By.XPATH, el_dc).text if current_job_item.find_elements(By.XPATH, el_dc) else "",
+                            "dc1":current_job_item.find_element(By.XPATH, el_dc2).text if current_job_item.find_elements(By.XPATH, el_dc2) else "",
+                            "tips":current_job_item.find_element(By.XPATH, el_tips).text if current_job_item.find_elements(By.XPATH, el_tips) else "",
+                            "dc2":current_job_item.find_element(By.XPATH, el_dc1).text if current_job_item.find_elements(By.XPATH, el_dc1) else "",
+                            "shrink0":current_job_item.find_element(By.XPATH, el_shrink0).text if current_job_item.find_elements(By.XPATH, el_shrink0) else "",
+                            "shrink3":current_job_item.find_element(By.XPATH, el_shrink3).text if current_job_item.find_elements(By.XPATH, el_shrink3) else "",
                         }
                         # print(result)
                     # result = {
@@ -158,7 +164,7 @@ def scrape_all_jobs(level,xpath):
         if all_results:
             print(f"\n爬取结束，共获得 {len(all_results)} 条数据。")
             df = pd.DataFrame(all_results)
-            output_filename = f"./6/{level}.xlsx"
+            output_filename = f".4/{cy}-{level}-刘雨蘅.xlsx"
             try:
                 df.to_excel(output_filename, index=False, engine='openpyxl')
                 print(f"数据已成功保存到: {output_filename}")
@@ -175,9 +181,9 @@ if __name__ == '__main__':
     el_map = {
         # "bachelor": el_bachelor,
         # "graduate": el_graduate,
-        "master": el_master,
-        "phd": el_phd
+        "硕士": el_master,
+        "博士": el_phd
     }
     for level,xpath in el_map.items():
         print(f"\n\n================ 开始爬取学历层次: {level} ================\n\n")
-        scrape_all_jobs(level=level,xpath=xpath)
+        scrape_all_jobs(level=level,xpath=xpath,cy="新兴数字")
