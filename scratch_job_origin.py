@@ -8,11 +8,11 @@ from time import sleep
 import json
 import random
 import os
-
+import socket 
 # --- 1. 配置和全局变量 ---
 
 # 关键词字典
-changye = ['新兴数字']
+changye = ['新一代信息技术','有色金属',"冶金工程"]
 
 changye_urls = [
 ]
@@ -37,6 +37,29 @@ el_tips = './descendant-or-self::SPAN[contains(@class,"tip shrink-0")]'
 el_shrink0 = './descendant-or-self::DIV[contains(@class,"shrink-0")]'
 el_shrink3 = './descendant-or-self::DIV[@class="shrink-0"]'
 el_dc1 = './descendant-or-self::SPAN[contains(@class,"dc shrink-0")][2]'
+
+
+def notify_and_sleep(task_name, duration_minutes=10):
+    """连接socket服务器发送完成通知，然后休眠。"""
+    host = '127.0.0.1'  # 服务器IP地址
+    port = 65432        # 服务器端口
+    message = f"任务完成: {task_name}"
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            print(f"\n正在连接服务器 {host}:{port} 发送通知...")
+            s.connect((host, port))
+            s.sendall(message.encode('utf-8'))
+            response = s.recv(1024)
+            print(f"服务器响应: {response.decode('utf-8')}")
+            print("通知发送成功。")
+    except Exception as e:
+        print(f"发送通知失败: {e}")
+
+    print(f"任务 '{task_name}' 已完成，现在开始休眠 {duration_minutes} 分钟...")
+    sleep(duration_minutes * 60)
+    print("休眠结束，继续下一个任务。")
+
 def handle_slider_verification(driver):
     """处理可能出现的滑块验证。"""
     try:
@@ -65,7 +88,7 @@ def handle_slider_verification(driver):
         print(f"  - 处理滑块验证时出错: {e}")
         return False
 
-def scrape_all_jobs(level,xpath,cy):
+def scrape_all_jobs(level,xpath,cy,keywords):
     """根据关键词字典爬取51job的职位详情，并保存为指定格式的Excel。"""
     print("正在初始化浏览器...")
     chrome_driver_path = './chromedriver.exe'
@@ -86,79 +109,78 @@ def scrape_all_jobs(level,xpath,cy):
     base_url = 'https://we.51job.com/pc/search'
 
     try:
-        for industry, keywords in changye_xueke_dict.items():
-            print(f"\n开始处理产业: '{industry}'")
-            for keyword in keywords:
-                print(f"\n-- 正在搜索关键词: '{keyword}' --")
-                search_url = f'{keyword}&searchType=2&sortType=0&metro='
-                web.get(search_url)
-                sleep(5)
-                # original_window = web.current_window_handle
+        
+        for keyword in keywords:
+            print(f"\n-- 正在搜索关键词: '{keyword}' --")
+            search_url = f'{keyword}&searchType=2&sortType=0&metro='
+            web.get(search_url)
+            sleep(5)
+            # original_window = web.current_window_handle
 
-                page = 0
-                while True:
-                    handle_slider_verification(web)
-                    
-                    print(f"\n  处理第 {page + 1} 页...")
-                    try:
-                        if page==0:
-                            toggle_button = web.find_element(By.XPATH, '//div[@class="carrybox"]/span[1]') # [0]
-                            toggle_button.click()
-                            sleep(2)
-                            option_button = web.find_element(By.XPATH, xpath)
-                            option_button.click()
-                            sleep(2)
-                        job_items = web.find_elements(By.XPATH, '//div[contains(@class, "joblist-item-job-wrapper")]')
-                        if not job_items:
-                            print(f"    页面上没有找到职位，结束当前关键词。")
-                            break
-                        print(f"    找到 {len(job_items)} 个职位，开始处理...")
-                    except NoSuchElementException:
-                        print(f"    无法定位到职位列表，结束当前关键词。")
+            page = 0
+            while True:
+                handle_slider_verification(web)
+                
+                print(f"\n  处理第 {page + 1} 页...")
+                try:
+                    if page==0:
+                        toggle_button = web.find_element(By.XPATH, '//div[@class="carrybox"]/span[1]') # [0]
+                        toggle_button.click()
+                        sleep(2)
+                        option_button = web.find_element(By.XPATH, xpath)
+                        option_button.click()
+                        sleep(2)
+                    job_items = web.find_elements(By.XPATH, '//div[contains(@class, "joblist-item-job-wrapper")]')
+                    if not job_items:
+                        print(f"    页面上没有找到职位，结束当前关键词。")
                         break
-                    for i in range(len(job_items)):
-                        current_job_item = web.find_elements(By.XPATH, '//div[contains(@class, "joblist-item-job-wrapper")]')[i]
-                        result = {
-                            "标题":current_job_item.find_element(By.XPATH, el_jname).text if current_job_item.find_elements(By.XPATH, el_jname) else "",
-                            "图片":current_job_item.find_element(By.XPATH, el_img_url).get_attribute('src') if current_job_item.find_elements(By.XPATH, el_img_url) else "",
-                            "sal":current_job_item.find_element(By.XPATH, el_sal).text if current_job_item.find_elements(By.XPATH, el_sal) else "",
-                            "关键词":current_job_item.find_element(By.XPATH, el_tags).text if current_job_item.find_elements(By.XPATH, el_tags) else "",
-                            "名称_链接":current_job_item.find_element(By.XPATH, el_cname_link).get_attribute('href') if current_job_item.find_elements(By.XPATH, el_cname_link) else "",
-                            "名称":current_job_item.find_element(By.XPATH, el_cname).text if current_job_item.find_elements(By.XPATH, el_cname) else "",    
-                            "dc":current_job_item.find_element(By.XPATH, el_dc).text if current_job_item.find_elements(By.XPATH, el_dc) else "",
-                            "dc1":current_job_item.find_element(By.XPATH, el_dc2).text if current_job_item.find_elements(By.XPATH, el_dc2) else "",
-                            "tips":current_job_item.find_element(By.XPATH, el_tips).text if current_job_item.find_elements(By.XPATH, el_tips) else "",
-                            "dc2":current_job_item.find_element(By.XPATH, el_dc1).text if current_job_item.find_elements(By.XPATH, el_dc1) else "",
-                            "shrink0":current_job_item.find_element(By.XPATH, el_shrink0).text if current_job_item.find_elements(By.XPATH, el_shrink0) else "",
-                            "shrink3":current_job_item.find_element(By.XPATH, el_shrink3).text if current_job_item.find_elements(By.XPATH, el_shrink3) else "",
-                        }
-                        # print(result)
-                    # result = {
-                    #     "图片": web.find_element(By.XPATH, el_img_url).get_attribute('src') if web.find_elements(By.XPATH, el_img_url) else "",
-                    #     "职位名称": web.find_element(By.XPATH, el_jname).text if web.find_elements(By.XPATH, el_jname) else "",
-                    #     "公司名称": web.find_element(By.XPATH, el_cname).text if web.find_elements(By.XPATH, el_cname) else "",
-                    #     "公司链接": web.find_element(By.XPATH, el_cname_link).get_attribute('href') if web.find_elements(By.XPATH, el_cname_link) else "",
-                    #     "薪资": web.find_element(By.XPATH, el_sal).text if web.find_elements(By.XPATH, el_sal) else "",
-                    #     "工作地点": web.find_element(By.XPATH, el_dc).text if web.find_elements(By.XPATH, el_dc) else "",
-                    #     "发布时间": web.find_element(By.XPATH, el_tips).text if web.find_elements(By.XPATH, el_tips) else "",
-                    #     "标签": web.find_element(By.XPATH, el_tags).text if web.find_elements(By.XPATH, el_tags) else "",
-                    # }
-                   
-                        all_results.append(result)
-                    # --- 翻页逻辑 ---
-                    try:
-                        next_button = web.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div/div[2]/div/div[2]/div/div[3]/div/div/div/button[2]')
-                        if next_button.get_attribute('disabled') is not None:
-                            print("  已到达最后一页，结束当前关键词。")
-                            break
-                        else:
-                            print("  点击下一页...")
-                            page += 1
-                            next_button.click()
-                            sleep(0.5) # 等待新页面加载
-                    except NoSuchElementException:
-                        print("  未找到下一页按钮，结束当前关键词。")
+                    print(f"    找到 {len(job_items)} 个职位，开始处理...")
+                except NoSuchElementException:
+                    print(f"    无法定位到职位列表，结束当前关键词。")
+                    break
+                for i in range(len(job_items)):
+                    current_job_item = web.find_elements(By.XPATH, '//div[contains(@class, "joblist-item-job-wrapper")]')[i]
+                    result = {
+                        "标题":current_job_item.find_element(By.XPATH, el_jname).text if current_job_item.find_elements(By.XPATH, el_jname) else "",
+                        "图片":current_job_item.find_element(By.XPATH, el_img_url).get_attribute('src') if current_job_item.find_elements(By.XPATH, el_img_url) else "",
+                        "sal":current_job_item.find_element(By.XPATH, el_sal).text if current_job_item.find_elements(By.XPATH, el_sal) else "",
+                        "关键词":current_job_item.find_element(By.XPATH, el_tags).text if current_job_item.find_elements(By.XPATH, el_tags) else "",
+                        "名称_链接":current_job_item.find_element(By.XPATH, el_cname_link).get_attribute('href') if current_job_item.find_elements(By.XPATH, el_cname_link) else "",
+                        "名称":current_job_item.find_element(By.XPATH, el_cname).text if current_job_item.find_elements(By.XPATH, el_cname) else "",    
+                        "dc":current_job_item.find_element(By.XPATH, el_dc).text if current_job_item.find_elements(By.XPATH, el_dc) else "",
+                        "dc1":current_job_item.find_element(By.XPATH, el_dc2).text if current_job_item.find_elements(By.XPATH, el_dc2) else "",
+                        "tips":current_job_item.find_element(By.XPATH, el_tips).text if current_job_item.find_elements(By.XPATH, el_tips) else "",
+                        "dc2":current_job_item.find_element(By.XPATH, el_dc1).text if current_job_item.find_elements(By.XPATH, el_dc1) else "",
+                        "shrink0":current_job_item.find_element(By.XPATH, el_shrink0).text if current_job_item.find_elements(By.XPATH, el_shrink0) else "",
+                        "shrink3":current_job_item.find_element(By.XPATH, el_shrink3).text if current_job_item.find_elements(By.XPATH, el_shrink3) else "",
+                    }
+                    # print(result)
+                # result = {
+                #     "图片": web.find_element(By.XPATH, el_img_url).get_attribute('src') if web.find_elements(By.XPATH, el_img_url) else "",
+                #     "职位名称": web.find_element(By.XPATH, el_jname).text if web.find_elements(By.XPATH, el_jname) else "",
+                #     "公司名称": web.find_element(By.XPATH, el_cname).text if web.find_elements(By.XPATH, el_cname) else "",
+                #     "公司链接": web.find_element(By.XPATH, el_cname_link).get_attribute('href') if web.find_elements(By.XPATH, el_cname_link) else "",
+                #     "薪资": web.find_element(By.XPATH, el_sal).text if web.find_elements(By.XPATH, el_sal) else "",
+                #     "工作地点": web.find_element(By.XPATH, el_dc).text if web.find_elements(By.XPATH, el_dc) else "",
+                #     "发布时间": web.find_element(By.XPATH, el_tips).text if web.find_elements(By.XPATH, el_tips) else "",
+                #     "标签": web.find_element(By.XPATH, el_tags).text if web.find_elements(By.XPATH, el_tags) else "",
+                # }
+                
+                    all_results.append(result)
+                # --- 翻页逻辑 ---
+                try:
+                    next_button = web.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div/div[2]/div/div[2]/div/div[3]/div/div/div/button[2]')
+                    if next_button.get_attribute('disabled') is not None:
+                        print("  已到达最后一页，结束当前关键词。")
                         break
+                    else:
+                        print("  点击下一页...")
+                        page += 1
+                        next_button.click()
+                        sleep(0.5) # 等待新页面加载
+                except NoSuchElementException:
+                    print("  未找到下一页按钮，结束当前关键词。")
+                    break
     except Exception as e:
         print(f"发生严重错误: {e}")
     finally:
@@ -186,6 +208,11 @@ if __name__ == '__main__':
         # "硕士": el_master,
         "博士": el_phd
     }
-    for level,xpath in el_map.items():
-        print(f"\n\n================ 开始爬取学历层次: {level} ================\n\n")
-        scrape_all_jobs(level=level,xpath=xpath,cy="新兴数字")
+    for cy,keywords in changye_xueke_dict.items():
+        for level,xpath in el_map.items():
+            task_name = f'{cy}-{level}'
+            print(f"\n\n================ 开始爬取task:{task_name} ================\n\n")
+            scrape_all_jobs(level=level,xpath=xpath,cy=cy,keywords=keywords)
+            notify_and_sleep(task_name, duration_minutes=6)
+
+    
