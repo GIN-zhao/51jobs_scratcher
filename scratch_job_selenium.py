@@ -186,7 +186,6 @@ def scrape_industry_level(industry, keywords, level, xpath):
 
 def scrape_all_jobs():
     """使用线程池爬取所有职位 (4学历 × 3产业 = 12个线程)"""
-    global all_results
     
     el_bachelor = '//div[@class="launchbox open"]/div[2]/div[1]/div[2]/a[4]'
     el_graduate = '//div[@class="launchbox open"]/div[2]/div[1]/div[2]/a[5]'
@@ -218,41 +217,20 @@ def scrape_all_jobs():
                 future = executor.submit(scrape_industry_level, industry, keywords, level, xpath)
                 futures.append((industry, level, future))
             
-            # 收集结果
+            # 收集结果并立即保存
+            print("\n================ 收集并保存结果 ================")
             for industry_name, level, future in futures:
-                key = f"{industry_name}-{level}"
-                all_results[key] = future.result()
+                results_list = future.result()
+                if results_list:
+                    df = pd.DataFrame(results_list)
+                    output_filename = f"./{industry_name}/{industry_name}-{level}-刘雨蘅.xlsx"
+                    try:
+                        df.to_excel(output_filename, index=False, engine='openpyxl')
+                        print(f"✓ 已保存: {output_filename} ({len(results_list)} 条数据)")
+                    except Exception as e:
+                        print(f"✗ 保存失败: {output_filename} - {e}")
+                else:
+                    print(f"- 无数据: {industry_name}-{level}")
         
-        # 爬完一个产业后，禁用网口10分钟（最后一个产业除外）
-        if industry_idx < len(industries) - 1:
-            print(f"\n产业 '{industry}' 爬取完成，正在禁用网络...")
-            disable_adapter("以太网")  # 修改为你的网卡名称，常见的有"以太网", "WLAN"等
-            
-            # 等待10分钟
-            wait_time = 600  # 10分钟 = 600秒
-            print(f"\n⏳ 等待 {wait_time // 60} 分钟后自动启用网络...")
-            for remaining in range(wait_time, 0, -1):
-                if remaining % 60 == 0 or remaining <= 5:
-                    print(f"⏱ 剩余时间: {remaining // 60}分{remaining % 60}秒")
-                sleep(1)
-            
-            enable_adapter("以太网")
-    
-    # 保存所有结果
-    print("\n================ 保存结果 ================")
-    for industry in changye_xueke_dict.keys():
-        for level in el_map.keys():
-            key = f"{industry}-{level}"
-            if key in all_results and all_results[key]:
-                df = pd.DataFrame(all_results[key])
-                output_filename = f"./{industry}/{industry}-{level}-刘雨蘅.xlsx"
-                try:
-                    df.to_excel(output_filename, index=False, engine='openpyxl')
-                    print(f"✓ 已保存: {output_filename} ({len(all_results[key])} 条数据)")
-                except Exception as e:
-                    print(f"✗ 保存失败: {output_filename} - {e}")
-            else:
-                print(f"- 无数据: {industry}-{level}")
-
 if __name__ == '__main__':
     scrape_all_jobs()
